@@ -5,7 +5,11 @@ $base = "http://127.0.0.1:5000"
 $session = New-Object Microsoft.PowerShell.Commands.WebRequestSession
 
 Write-Host "Logging in as admin..." -ForegroundColor Cyan
-$loginBody = @{ email='admin@fastedge.local'; password='fastedge_admin' } | ConvertTo-Json
+$adminEmail = $env:ADMIN_EMAIL
+if ([string]::IsNullOrEmpty($adminEmail)) { $adminEmail = 'admin@fastedge.local' }
+$adminPass = $env:ADMIN_PASSWORD
+if ([string]::IsNullOrEmpty($adminPass)) { $adminPass = 'ChangeMe123!' }
+$loginBody = @{ email=$adminEmail; password=$adminPass } | ConvertTo-Json
 Invoke-RestMethod -Uri "$base/api/auth/login" -Method Post -ContentType 'application/json' -Body $loginBody -WebSession $session | Out-Null
 
 Write-Host "Submitting sample text to /api/openai/extract-customers ..." -ForegroundColor Cyan

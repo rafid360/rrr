@@ -22,7 +22,7 @@ router.post('/extract-customers', requireAuth, limiter, async (req, res) => {
 
     // Use responses API to get structured JSON
     const response = await client.responses.create({
-      model: process.env.OPENAI_MODEL || 'gpt-5-nano',
+      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       input: prompt,
       response_format: { type: 'json_schema', json_schema: {
         name: 'customer_extraction',
