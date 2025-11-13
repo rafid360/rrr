@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { assignUserPackage, fetchPackages, fetchUsers, setUserSuspended, createUser } from '../api/admin';
+import { useDebounce } from '../hooks/useDebounce';
 
 export default function AdminUsers() {
   const [users, setUsers] = useState<any[]>([]);
@@ -7,6 +8,9 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all'|'active'|'suspended'>('all');
   const [loading, setLoading] = useState(false);
+
+  // Debounce search input for better performance
+  const debouncedSearch = useDebounce(search, 400);
 
   // Create user form state
   const [newName, setNewName] = useState('');
@@ -19,18 +23,23 @@ export default function AdminUsers() {
   const load = async () => {
     setLoading(true);
     try {
-      const data = await fetchUsers({ search: search || undefined, status: status === 'all' ? undefined : status });
-      setUsers(data);
+      const response = await fetchUsers({ search: debouncedSearch || undefined, status: status === 'all' ? undefined : status });
+      // Handle both old and new API response formats
+      const userData = response.users || response;
+      setUsers(Array.isArray(userData) ? userData : []);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    load();
     (async () => setPackages(await fetchPackages()))();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, status]);
 
   return (
     <div>
@@ -74,13 +83,18 @@ export default function AdminUsers() {
         {createError && <div className="text-red-400 mt-2 text-sm">{createError}</div>}
       </div>
       <div className="flex gap-2 mb-4">
-        <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search name/email" className="px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100" />
+        <input 
+          value={search} 
+          onChange={(e) => setSearch(e.target.value)} 
+          placeholder="Search name/email (auto-filters)" 
+          className="flex-1 px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100" 
+        />
         <select value={status} onChange={(e) => setStatus(e.target.value as any)} className="px-3 py-2 rounded bg-neutral-900 border border-neutral-700 text-neutral-100">
           <option value="all">All</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
         </select>
-        <button className="btn" onClick={load}>Filter</button>
+        {loading && <span className="text-neutral-400 self-center text-sm">Searching...</span>}
       </div>
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">

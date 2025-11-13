@@ -19,5 +19,10 @@ userSchema.methods.comparePassword = function (plain) {
   return bcrypt.compare(plain, this.passwordHash);
 };
 
+// Compound indexes for common query patterns
+userSchema.index({ suspended: 1, role: 1 }); // Filter by status and role
+userSchema.index({ email: 1, suspended: 1 }); // Search by email and status
+userSchema.index({ createdAt: -1 }); // Sort by creation date
+
 const User = mongoose.model('User', userSchema);
 module.exports = User;

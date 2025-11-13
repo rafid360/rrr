@@ -10,4 +10,10 @@ const transactionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for common query patterns
+transactionSchema.index({ user: 1, createdAt: -1 }); // User transaction history
+transactionSchema.index({ status: 1, createdAt: -1 }); // Filter by status
+transactionSchema.index({ kind: 1, status: 1 }); // Filter by kind and status
+transactionSchema.index({ createdAt: -1 }); // Sort by date
+
 module.exports = mongoose.model('Transaction', transactionSchema);

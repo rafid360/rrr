@@ -13,4 +13,9 @@ const paymentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Indexes for common query patterns
+paymentSchema.index({ user: 1, createdAt: -1 }); // User payments history
+paymentSchema.index({ status: 1, createdAt: -1 }); // Filter by status
+paymentSchema.index({ createdAt: -1 }); // Sort by date
+
 module.exports = mongoose.model('Payment', paymentSchema);

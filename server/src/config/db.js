@@ -4,10 +4,17 @@ const { MongoMemoryServer } = require('mongodb-memory-server');
 
 async function connectDB(uri) {
   const isProd = process.env.NODE_ENV === 'production';
+  const options = {
+    maxPoolSize: 10, // Maximum connection pool size
+    minPoolSize: 2,  // Minimum connection pool size
+    socketTimeoutMS: 45000, // Socket timeout
+    serverSelectionTimeoutMS: 5000, // Timeout for server selection
+  };
+  
   try {
     if (uri) {
-      await mongoose.connect(uri);
-      console.log(`[DB] Connected to MongoDB`);
+      await mongoose.connect(uri, options);
+      console.log(`[DB] Connected to MongoDB with connection pooling`);
       return;
     }
     if (isProd) {

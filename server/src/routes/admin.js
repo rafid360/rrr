@@ -20,7 +20,7 @@ router.use((req, res, next) => {
 // Users list with search and status filters
 router.get('/users', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    const { search = '', status } = req.query;
+    const { search = '', status, page = 1, limit = 50 } = req.query;
     const q = {};
     if (search) {
       q.$or = [
@@ -30,8 +30,27 @@ router.get('/users', requireAuth, requireRole('admin'), async (req, res) => {
     }
     if (status === 'suspended') q.suspended = true;
     if (status === 'active') q.suspended = false;
-    const users = await User.find(q).select('name email role suspended package').populate('package');
-    return res.json(users);
+    
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [users, total] = await Promise.all([
+      User.find(q)
+        .select('name email role suspended package')
+        .populate('package')
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(), // Convert to plain JS objects for better performance
+      User.countDocuments(q)
+    ]);
+    
+    return res.json({ 
+      users, 
+      pagination: { 
+        page: parseInt(page), 
+        limit: parseInt(limit), 
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (err) {
     console.error('[Admin] users list error', err);
     return res.status(500).json({ message: 'Internal server error' });
@@ -94,7 +113,7 @@ router.patch('/users/:id/package', requireAuth, requireRole('admin'), async (req
 // Packages list
 router.get('/packages', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    const pkgs = await Package.find({}).sort({ priceMonthly: 1 });
+    const pkgs = await Package.find({}).sort({ priceMonthly: 1 }).lean();
     return res.json(pkgs);
   } catch (err) {
     console.error('[Admin] packages list error', err);
@@ -133,8 +152,29 @@ router.patch('/packages/:id', requireAuth, requireRole('admin'), async (req, res
 // Payments list
 router.get('/payments', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    const payments = await Payment.find({}).sort({ createdAt: -1 }).populate('user package');
-    return res.json(payments);
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [payments, total] = await Promise.all([
+      Payment.find({})
+        .sort({ createdAt: -1 })
+        .populate('user', 'name email')
+        .populate('package', 'name')
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Payment.countDocuments({})
+    ]);
+    
+    return res.json({ 
+      payments, 
+      pagination: { 
+        page: parseInt(page), 
+        limit: parseInt(limit), 
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (err) {
     console.error('[Admin] payments list error', err);
     return res.status(500).json({ message: 'Internal server error' });
@@ -172,8 +212,28 @@ router.post('/payments', requireAuth, requireRole('admin'), async (req, res) => 
 // Transactions list
 router.get('/transactions', requireAuth, requireRole('admin'), async (req, res) => {
   try {
-    const txs = await Transaction.find({}).sort({ createdAt: -1 }).populate('user');
-    return res.json(txs);
+    const { page = 1, limit = 50 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    const [txs, total] = await Promise.all([
+      Transaction.find({})
+        .sort({ createdAt: -1 })
+        .populate('user', 'name email')
+        .skip(skip)
+        .limit(parseInt(limit))
+        .lean(),
+      Transaction.countDocuments({})
+    ]);
+    
+    return res.json({ 
+      transactions: txs, 
+      pagination: { 
+        page: parseInt(page), 
+        limit: parseInt(limit), 
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
   } catch (err) {
     console.error('[Admin] transactions list error', err);
     return res.status(500).json({ message: 'Internal server error' });

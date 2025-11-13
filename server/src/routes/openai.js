@@ -6,6 +6,15 @@ const { requireAuth } = require('../middleware/auth');
 
 const limiter = rateLimit({ windowMs: 60 * 1000, max: 20 });
 
+// Singleton OpenAI client for better performance
+let openaiClient = null;
+function getOpenAIClient() {
+  if (!openaiClient) {
+    openaiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  }
+  return openaiClient;
+}
+
 router.post('/extract-customers', requireAuth, limiter, async (req, res) => {
   const { text: inputText } = req.body || {};
   if (!inputText || typeof inputText !== 'string') {
@@ -13,7 +22,7 @@ router.post('/extract-customers', requireAuth, limiter, async (req, res) => {
   }
 
   try {
-    const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const client = getOpenAIClient();
 
     const prompt = `Read the text and extract and provide as serial, name, phone number, address (structured), email.\n\nText:\n${inputText}`;
 
